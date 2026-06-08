@@ -1,5 +1,5 @@
 const CACHE_NAME = 'note-app-v1';
-const ASSETS = ['1index.html', 'manifest.json'];
+const ASSETS = ['index.html', 'manifest.json'];
 
 self.addEventListener('install', (e) => {
     e.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)));
