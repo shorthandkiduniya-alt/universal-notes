@@ -1,0 +1,16 @@
+{
+  "name": "Universal AutoSave Notes",
+  "short_name": "UniNotes",
+  "start_url": "1index.html",
+  "display": "standalone",
+  "background_color": "#fffcf4",
+  "theme-color": "#8e6216",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://flaticon.com",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
