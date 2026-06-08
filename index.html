@@ -3,48 +3,165 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Universal Offline Notes</title>
+    <title>Universal Redmi Notes</title>
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#8e6216">
+    <meta name="theme-color" content="#f1a80a">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Segoe UI', Arial, sans-serif; background: #fffcf4; color: #333; padding: 20px; display: flex; flex-direction: column; height: 100vh; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #f0e6d2; padding-bottom: 10px; }
-        .title { font-size: 22px; font-weight: bold; color: #8e6216; }
-        .status { font-size: 12px; color: #999; background: #f3ebd9; padding: 4px 10px; border-radius: 12px; font-weight: 500; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background: #fdfaf2; color: #333; display: flex; flex-direction: column; height: 100vh; }
+        
+        /* Header */
+        .header { background: #f1a80a; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .title { font-size: 20px; font-weight: bold; display: flex; align-items: center; gap: 8px; }
+        .status { font-size: 11px; background: rgba(255,255,255,0.2); padding: 3px 8px; border-radius: 10px; }
+        
+        /* Screen Views */
+        .view { display: none; flex-direction: column; flex: 1; padding: 15px; overflow-y: auto; }
+        .active-view { display: flex; }
+        
+        /* List View (Main Screen) */
+        .notes-list { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .note-card { background: #fff; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-left: 5px solid #f1a80a; position: relative; height: 120px; display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; }
+        .note-card p { font-size: 14px; line-height: 1.4; color: #555; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; word-break: break-all; }
+        .note-card .date { font-size: 11px; color: #aaa; margin-top: 5px; }
+        .delete-btn { position: absolute; top: 10px; right: 10px; background: none; border: none; color: #ff4d4d; font-size: 16px; cursor: pointer; padding: 5px; }
+        
+        /* Editor View */
+        .back-btn { background: none; border: none; color: #f1a80a; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 15px; text-align: left; display: flex; align-items: center; gap: 5px; }
         textarea { width: 100%; flex: 1; border: none; background: transparent; font-size: 18px; line-height: 1.6; outline: none; resize: none; color: #222; }
+        
+        /* Floating Action Button */
+        .fab { position: fixed; bottom: 30px; right: 30px; background: #f1a80a; color: white; border: none; border-radius: 50%; width: 56px; height: 56px; font-size: 28px; display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 10px rgba(241, 168, 10, 0.4); cursor: pointer; }
+        .no-notes { text-align: center; color: #aaa; margin-top: 100px; font-size: 16px; }
     </style>
 </head>
 <body>
 
-<div class="header">
-    <div class="title">📝 Universal Notes</div>
-    <div class="status" id="statusText">Saved Offline</div>
-</div>
+    <div class="header">
+        <div class="title">📝 Mi Notes</div>
+        <div class="status" id="statusText">Offline Ready</div>
+    </div>
 
-<textarea id="noteArea" placeholder="Yahan likhna shuru karein (Automatic save hoga)..."></textarea>
+    <!-- MAIN LIST VIEW -->
+    <div id="listView" class="view active-view">
+        <div id="notesContainer" class="notes-list"></div>
+        <div id="noNotesText" class="no-notes" style="display: none;">Koi bhi note nahi hai. Naya banayein!</div>
+        <button class="fab" onclick="createNewNote()">+</button>
+    </div>
+
+    <!-- EDITOR VIEW -->
+    <div id="editorView" class="view">
+        <button class="back-btn" onclick="showListView()">⬅ Back</button>
+        <textarea id="noteArea" placeholder="Yahan likhna shuru karein (Automatic save hoga)..."></textarea>
+    </div>
 
 <script>
+    let notes = JSON.parse(localStorage.getItem('mi_notes_data')) || [];
+    let currentNoteId = null;
+    
+    const listView = document.getElementById('listView');
+    const editorView = document.getElementById('editorView');
+    const notesContainer = document.getElementById('notesContainer');
+    const noNotesText = document.getElementById('noNotesText');
     const noteArea = document.getElementById('noteArea');
     const statusText = document.getElementById('statusText');
 
-    window.addEventListener('DOMContentLoaded', () => {
-        const savedNote = localStorage.getItem('universal_private_note');
-        if (savedNote) noteArea.value = savedNote;
-    });
+    function renderNotes() {
+        notesContainer.innerHTML = '';
+        if (notes.length === 0) {
+            noNotesText.style.display = 'block';
+            return;
+        }
+        noNotesText.style.display = 'none';
 
+        notes.forEach(note => {
+            const card = document.createElement('div');
+            card.className = 'note-card';
+            card.onclick = () => openNote(note.id);
+            
+            const textPreview = note.text.trim() || '<Khali Note>';
+            
+            card.innerHTML = `
+                <p>${textPreview.replace(/\n/g, '<br>')}</p>
+                <div class="date">${note.date}</div>
+                <button class="delete-btn" onclick="deleteNote(event, '${note.id}')">🗑</button>
+            `;
+            notesContainer.appendChild(card);
+        });
+    }
+
+    function createNewNote() {
+        const newNote = {
+            id: 'note_' + Date.now(),
+            text: '',
+            date: new Date().toLocaleDateString('en-IN', { hour: '2-digit', minute: '2-digit' })
+        };
+        notes.unshift(newNote);
+        currentNoteId = newNote.id;
+        noteArea.value = '';
+        
+        listView.classList.remove('active-view');
+        editorView.classList.add('active-view');
+        noteArea.focus();
+    }
+
+    function openNote(id) {
+        currentNoteId = id;
+        const note = notes.find(n => n.id === id);
+        noteArea.value = note ? note.text : '';
+        
+        listView.classList.remove('active-view');
+        editorView.classList.add('active-view');
+    }
+
+    function showListView() {
+        // Khali notes ko automatic saaf karne ke liye
+        notes = notes.filter(n => n.text.trim() !== '');
+        saveToStorage();
+        renderNotes();
+        editorView.classList.remove('active-view');
+        listView.classList.add('active-view');
+    }
+
+    // Auto-Save System
     noteArea.addEventListener('input', () => {
-        localStorage.setItem('universal_private_note', noteArea.value);
+        if (!currentNoteId) return;
+        
+        const noteIndex = notes.findIndex(n => n.id === currentNoteId);
+        if (noteIndex !== -1) {
+            notes[noteIndex].text = noteArea.value;
+            notes[noteIndex].date = new Date().toLocaleDateString('en-IN', { hour: '2-digit', minute: '2-digit' });
+            saveToStorage();
+        }
+        
         statusText.innerText = "Typing...";
         clearTimeout(window.saveTimer);
-        window.saveTimer = setTimeout(() => { statusText.innerText = "Saved Offline"; }, 400);
+        window.saveTimer = setTimeout(() => { statusText.innerText = "Saved Offline"; }, 300);
     });
 
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js');
+    function deleteNote(event, id) {
+        event.stopPropagation(); // Card click event ko rokne ke liye
+        if(confirm("Kya aap is note ko mitaana chahte hain?")) {
+            notes = notes.filter(n => n.id !== id);
+            saveToStorage();
+            renderNotes();
+        }
     }
+
+    function saveToStorage() {
+        localStorage.setItem('mi_notes_data', JSON.stringify(notes));
+    }
+
+    // Initial Load
+    window.addEventListener('DOMContentLoaded', () => {
+        renderNotes();
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
+    });
 </script>
 </body>
 </html>
+
