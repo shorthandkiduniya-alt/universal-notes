@@ -74,8 +74,8 @@
     <div class="app-main-header">
         <div class="app-title">QuickNotes</div>
         <div class="header-action-icons">
-            <div>🔍</div>
-            <div>⚙️</div>
+            <div id="searchBtn">🔍</div>
+            <div id="settingsBtn">⚙️</div>
         </div>
     </div>
 
@@ -377,7 +377,289 @@ document.getElementById('mindMapTrigger')
     </ul>
     `;
 };
+// SEARCH
 
+document.getElementById("searchBtn").onclick = () => {
+
+    const keyword = prompt("Search notes");
+
+    if(!keyword) return;
+
+    const filtered = notes.filter(n =>
+        (n.title || "").toLowerCase().includes(keyword.toLowerCase()) ||
+        (n.content || "").toLowerCase().includes(keyword.toLowerCase())
+    );
+
+    notesContainer.innerHTML = "";
+
+    filtered.forEach(note => {
+
+        const card = document.createElement("div");
+
+        card.className = "note-card";
+
+        card.innerHTML = `
+        <div class="preview-title">${note.title}</div>
+        <div class="preview-text">
+        ${(note.content || "").replace(/<[^>]*>/g,"").substring(0,100)}
+        </div>
+        <div class="date">${note.date}</div>
+        `;
+
+        card.onclick = ()=>openNote(note.id);
+
+        notesContainer.appendChild(card);
+    });
+
+};
+
+// SETTINGS
+
+document.getElementById("settingsBtn").onclick = () => {
+
+    const action = prompt(
+`Settings
+
+1 = Dark Mode
+
+2 = Export Notes
+
+3 = Delete All Notes`
+    );
+
+    if(action==="1"){
+
+        document.body.style.background="#111";
+        document.body.style.color="#fff";
+
+    }
+
+    if(action==="2"){
+
+        const data =
+        JSON.stringify(notes,null,2);
+
+        const blob =
+        new Blob([data],{
+            type:"application/json"
+        });
+
+        const a =
+        document.createElement("a");
+
+        a.href =
+        URL.createObjectURL(blob);
+
+        a.download =
+        "quicknotes-backup.json";
+
+        a.click();
+    }
+
+    if(action==="3"){
+
+        if(confirm("Delete all notes?")){
+
+            notes = [];
+
+            saveNotes();
+
+            renderNotes();
+        }
+    }
+};
+
+// HYBRID MINDMAP
+
+document.getElementById("mindMapTrigger")
+.onclick = () => {
+
+richEditor.innerHTML += `
+
+<div style="
+border:2px solid #3498db;
+padding:15px;
+border-radius:10px;
+margin:10px 0">
+
+<h2 style="text-align:center">
+MAIN TOPIC
+</h2>
+
+<ul>
+<li>Branch A
+    <ul>
+        <li>Sub Idea 1</li>
+        <li>Sub Idea 2</li>
+    </ul>
+</li>
+
+<li>Branch B
+    <ul>
+        <li>Sub Idea 3</li>
+        <li>Sub Idea 4</li>
+    </ul>
+</li>
+
+<li>Branch C
+    <ul>
+        <li>Sub Idea 5</li>
+    </ul>
+</li>
+
+</ul>
+
+</div>
+
+`;
+};
+
+// SKETCH TOOL
+
+const canvasView =
+document.getElementById("canvasView");
+
+const paintCanvas =
+document.getElementById("paintCanvas");
+
+const ctx =
+paintCanvas.getContext("2d");
+
+document.getElementById("toolPaint")
+.onclick = ()=>{
+
+    canvasView.style.display="flex";
+
+    setTimeout(()=>{
+
+        paintCanvas.width =
+        paintCanvas.offsetWidth;
+
+        paintCanvas.height =
+        paintCanvas.offsetHeight;
+
+    },100);
+};
+
+document.getElementById("canvasCancelBtn")
+.onclick = ()=>{
+
+    canvasView.style.display="none";
+};
+
+let drawing = false;
+
+paintCanvas.addEventListener(
+"pointerdown",
+e=>{
+
+drawing=true;
+
+ctx.beginPath();
+
+ctx.moveTo(
+e.offsetX,
+e.offsetY
+);
+
+});
+
+paintCanvas.addEventListener(
+"pointermove",
+e=>{
+
+if(!drawing) return;
+
+ctx.lineTo(
+e.offsetX,
+e.offsetY
+);
+
+ctx.stroke();
+
+});
+
+paintCanvas.addEventListener(
+"pointerup",
+()=>{
+
+drawing=false;
+
+});
+
+document.getElementById("canvasSaveBtn")
+.onclick = ()=>{
+
+const img =
+paintCanvas.toDataURL();
+
+richEditor.innerHTML +=
+`<img src="${img}" class="embedded-media">`;
+
+canvasView.style.display="none";
+
+};
+
+// AUDIO RECORD
+
+document.getElementById("recordBtn")
+.onclick = async ()=>{
+
+if(!isRecording){
+
+const stream =
+await navigator.mediaDevices.getUserMedia({
+audio:true
+});
+
+mediaRecorder =
+new MediaRecorder(stream);
+
+audioChunks=[];
+
+mediaRecorder.ondataavailable =
+e=>audioChunks.push(e.data);
+
+mediaRecorder.onstop = ()=>{
+
+const blob =
+new Blob(audioChunks,{
+type:'audio/webm'
+});
+
+const url =
+URL.createObjectURL(blob);
+
+richEditor.innerHTML +=
+`
+<audio controls
+class="embedded-media">
+<source src="${url}">
+</audio>
+`;
+};
+
+mediaRecorder.start();
+
+isRecording=true;
+
+document.getElementById(
+"recordingStatus"
+).style.display="block";
+
+}else{
+
+mediaRecorder.stop();
+
+isRecording=false;
+
+document.getElementById(
+"recordingStatus"
+).style.display="none";
+
+}
+
+};
 renderNotes();
 
     </script>
