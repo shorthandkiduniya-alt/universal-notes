@@ -1,15 +1,14 @@
 {
-  "name": "Universal AutoSave Notes",
-  "short_name": "UniNotes",
-  "start_url": "index.html",
+  "name": "QuickNotes Pro",
+  "short_name": "QuickNotes",
+  "start_url": "/",
   "display": "standalone",
-  "background_color": "#fffcf4",
-  "theme-color": "#8e6216",
-  "orientation": "portrait",
+  "background_color": "#fafafa",
+  "theme_color": "#2c3e50",
   "icons": [
     {
-      "src": "https://flaticon.com",
-      "sizes": "512x512",
+      "src": "icon-192.png",
+      "sizes": "192x192",
       "type": "image/png"
     }
   ]
