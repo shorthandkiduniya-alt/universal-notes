@@ -157,3 +157,229 @@
     const editorView = document.getElementById('editorView');
     
 
+const notesContainer = document.getElementById('notesContainer');
+const createNoteTrigger = document.getElementById('createNoteTrigger');
+const editorBackBtn = document.getElementById('editorBackBtn');
+const noteTitle = document.getElementById('noteTitle');
+const richEditor = document.getElementById('richEditor');
+const metaInfoText = document.getElementById('metaInfoText');
+
+function saveNotes() {
+    localStorage.setItem(
+        'universal_pro_notes',
+        JSON.stringify(notes)
+    );
+}
+
+function renderNotes() {
+
+    notesContainer.innerHTML = '';
+
+    notes.sort((a,b)=>b.id-a.id);
+
+    notes.forEach(note => {
+
+        const card = document.createElement('div');
+        card.className = 'note-card';
+
+        card.innerHTML = `
+            <div class="preview-title">${note.title || 'Untitled'}</div>
+            <div class="preview-text">
+                ${(note.content || '').replace(/<[^>]*>/g,'').substring(0,100)}
+            </div>
+            <div class="date">${note.date}</div>
+            <button class="delete-btn">🗑</button>
+        `;
+
+        card.onclick = () => openNote(note.id);
+
+        card.querySelector('.delete-btn').onclick = (e)=>{
+            e.stopPropagation();
+
+            if(confirm('Delete note?')){
+                notes = notes.filter(n=>n.id !== note.id);
+                saveNotes();
+                renderNotes();
+            }
+        };
+
+        notesContainer.appendChild(card);
+    });
+}
+
+function openEditor() {
+
+    listView.classList.remove('active-view');
+    editorView.classList.add('active-view');
+}
+
+function openList() {
+
+    editorView.classList.remove('active-view');
+    listView.classList.add('active-view');
+}
+
+createNoteTrigger.addEventListener('click',()=>{
+
+    currentNoteId = Date.now();
+
+    noteTitle.value = '';
+    richEditor.innerHTML = '';
+
+    openEditor();
+});
+
+editorBackBtn.addEventListener('click',()=>{
+
+    const title = noteTitle.value.trim();
+    const content = richEditor.innerHTML.trim();
+
+    if(title || content){
+
+        const existing = notes.find(
+            n => n.id === currentNoteId
+        );
+
+        const data = {
+            id: currentNoteId,
+            title,
+            content,
+            date: new Date().toLocaleString()
+        };
+
+        if(existing){
+
+            Object.assign(existing,data);
+
+        }else{
+
+            notes.push(data);
+        }
+
+        saveNotes();
+    }
+
+    renderNotes();
+    openList();
+});
+
+function openNote(id){
+
+    const note = notes.find(n=>n.id===id);
+
+    if(!note) return;
+
+    currentNoteId = id;
+
+    noteTitle.value = note.title;
+    richEditor.innerHTML = note.content;
+
+    openEditor();
+}
+
+richEditor.addEventListener('input',()=>{
+
+    const count =
+    richEditor.innerText.length;
+
+    metaInfoText.textContent =
+    new Date().toLocaleDateString() +
+    ' | ' +
+    count +
+    ' characters';
+});
+
+document.getElementById('toolText')
+.addEventListener('click',()=>{
+
+    const popup =
+    document.getElementById('formattingPopup');
+
+    popup.style.display =
+    popup.style.display === 'flex'
+    ? 'none'
+    : 'flex';
+});
+
+document.getElementById('btnBold')
+.onclick=()=>document.execCommand('bold');
+
+document.getElementById('btnItalic')
+.onclick=()=>document.execCommand('italic');
+
+document.getElementById('btnUnderline')
+.onclick=()=>document.execCommand('underline');
+
+document.getElementById('btnCenter')
+.onclick=()=>document.execCommand('justifyCenter');
+
+document.getElementById('btnLeft')
+.onclick=()=>document.execCommand('justifyLeft');
+
+document.getElementById('btnRight')
+.onclick=()=>document.execCommand('justifyRight');
+
+document.getElementById('btnColor')
+.onclick=()=>document.execCommand(
+'foreColor',false,'red'
+);
+
+document.getElementById('btnHighlight')
+.onclick=()=>document.execCommand(
+'hiliteColor',false,'yellow'
+);
+
+document.getElementById('toolPoints')
+.onclick=()=>document.execCommand(
+'insertUnorderedList'
+);
+
+document.getElementById('toolGallery')
+.onclick=()=>{
+
+    document
+    .getElementById('imageInput')
+    .click();
+};
+
+document.getElementById('imageInput')
+.addEventListener('change',(e)=>{
+
+    const file = e.target.files[0];
+
+    if(!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = function(ev){
+
+        richEditor.innerHTML += `
+        <img src="${ev.target.result}"
+        class="embedded-media">
+        `;
+    };
+
+    reader.readAsDataURL(file);
+});
+
+document.getElementById('mindMapTrigger')
+.onclick=()=>{
+
+    richEditor.innerHTML += `
+    <h3>Mind Map</h3>
+    <ul>
+      <li>Main Topic
+        <ul>
+          <li>Idea 1</li>
+          <li>Idea 2</li>
+        </ul>
+      </li>
+    </ul>
+    `;
+};
+
+renderNotes();
+
+    </script>
+</body>
+</html>
